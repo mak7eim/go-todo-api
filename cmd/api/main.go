@@ -39,7 +39,7 @@ func tasksHandler(w http.ResponseWriter, r *http.Request) {
 	case http.MethodPost:
 		postTasks(w, r)
 	default:
-		http.Error(w, "не верный метод", http.StatusMethodNotAllowed)
+		http.Error(w, "wrong method", http.StatusMethodNotAllowed)
 	}
 }
 
@@ -47,7 +47,8 @@ func getTasks(w http.ResponseWriter) {
 	err := json.NewEncoder(w).Encode(tasks)
 
 	if err != nil {
-		http.Error(w, "ошибка кодирования", http.StatusInternalServerError)
+		http.Error(w, "encoding error", http.StatusInternalServerError)
+		return
 	}
 }
 
@@ -56,12 +57,12 @@ func postTasks(w http.ResponseWriter, r *http.Request) {
 	err := json.NewDecoder(r.Body).Decode(&task)
 
 	if err != nil {
-		http.Error(w, "неверный формат JSON", http.StatusBadRequest)
+		http.Error(w, "invalid JSON format", http.StatusBadRequest)
 		return
 	}
 
 	if task.Title == "" {
-		http.Error(w, "поле title обязательно", http.StatusBadRequest)
+		http.Error(w, "title field is required", http.StatusBadRequest)
 		return
 	}
 
@@ -74,7 +75,7 @@ func postTasks(w http.ResponseWriter, r *http.Request) {
 	err = json.NewEncoder(w).Encode(task)
 
 	if err != nil {
-		log.Println("ошибка кодировки", http.StatusInternalServerError)
+		log.Println("encoding error", http.StatusInternalServerError)
 	}
 }
 
@@ -83,10 +84,15 @@ func taskHandler(w http.ResponseWriter, r *http.Request) {
 
 	parts := strings.Split(r.URL.Path, "/")
 
+	if len(parts) < 3 {
+		http.Error(w, "invalid URL", http.StatusBadRequest)
+		return
+	}
+
 	id := parts[2]
 
-	if id != "" {
-		http.Error(w, "id не указан", http.StatusBadRequest)
+	if id == "" {
+		http.Error(w, "id not specified", http.StatusBadRequest)
 	}
 
 	switch r.Method {
@@ -97,7 +103,7 @@ func taskHandler(w http.ResponseWriter, r *http.Request) {
 	case http.MethodDelete:
 		deleteTask(w, id)
 	default:
-		http.Error(w, "неверный метод", http.StatusMethodNotAllowed)
+		http.Error(w, "wrong method", http.StatusMethodNotAllowed)
 	}
 }
 
@@ -107,25 +113,25 @@ func getTask(w http.ResponseWriter, id string) {
 			err := json.NewEncoder(w).Encode(v)
 
 			if err != nil {
-				http.Error(w, "ошибка кодировки", http.StatusInternalServerError)
+				http.Error(w, "encoding error", http.StatusInternalServerError)
 			}
 			return
 		}
 	}
 
-	http.Error(w, "задача не найдена", http.StatusNotFound)
+	http.Error(w, "task not found", http.StatusNotFound)
 }
 
 func putTask(w http.ResponseWriter, r *http.Request, id string) {
 	var updatedTask Task
 
 	if err := json.NewDecoder(r.Body).Decode(&updatedTask); err != nil {
-		http.Error(w, "неверный формат JSON", http.StatusBadRequest)
+		http.Error(w, "invalid JSON format", http.StatusBadRequest)
 		return
 	}
 
 	if updatedTask.Title == "" {
-		http.Error(w, "поле title обязательно", http.StatusBadRequest)
+		http.Error(w, "title field is required", http.StatusBadRequest)
 		return
 	}
 
@@ -133,12 +139,17 @@ func putTask(w http.ResponseWriter, r *http.Request, id string) {
 		if task.ID == id {
 			updatedTask.ID = id
 			tasks[i] = updatedTask
-			json.NewEncoder(w).Encode(updatedTask)
+
+			err := json.NewEncoder(w).Encode(updatedTask)
+
+			if err != nil {
+				http.Error(w, "encoding error", http.StatusInternalServerError)
+			}
 			return
 		}
 	}
 
-	http.Error(w, "задача не найдена", http.StatusNotFound)
+	http.Error(w, "task not found", http.StatusNotFound)
 }
 
 func deleteTask(w http.ResponseWriter, id string) {
@@ -150,5 +161,5 @@ func deleteTask(w http.ResponseWriter, id string) {
 		}
 	}
 
-	http.Error(w, "задача не найдена", http.StatusNotFound)
+	http.Error(w, "task not found", http.StatusNotFound)
 }
